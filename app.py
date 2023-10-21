@@ -3,7 +3,8 @@ import streamlit as st
 import datetime
 import plotly.graph_objects as go
 import plotly.express as px
-from utils import *
+from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_sold, get_inv_under_repair, \
+    get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value
 
 st.set_page_config(page_title="Inventory Insights", page_icon="📊", layout="wide")
 
