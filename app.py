@@ -57,7 +57,7 @@ if file_upload is not None:
                                   options=set(df["Unit #"].dropna().values),
                                   placeholder="All")
 
-    month = st.sidebar.selectbox(label="Month", options=months_list)
+    month = st.sidebar.multiselect(label="Month", options=months_list)
     year = st.sidebar.selectbox(label="Year", options=year_list)
 
     # -------------------- Filtered Data -------------------------------------------
@@ -65,9 +65,9 @@ if file_upload is not None:
     filtered_df = filtered_df[filtered_df["Year"] == year]
     filtered_data = filtered_df.copy()
     filtered_df_prev = filtered_df.copy()
-    filtered_df = filtered_df[filtered_df["Month"] == month]
+    filtered_df = filtered_df[filtered_df["Month"].isin(month)]
 
-    previous_month = months_list[months_list.index(month) - 1]
+    previous_month = months_list[months_list.index(month[0]) - 1]
     if previous_month == "December":
         filtered_df_prev = pd.DataFrame()
     else:
