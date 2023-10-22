@@ -43,84 +43,84 @@ if file_upload is not None:
     year_list = list(set(df[df["Year"] != 0]["Year"].values))
     year_list.sort()
 
-    # ------------------------ Filters ------------------------------------------------
-    location = st.sidebar.multiselect(label="Location",
-                                      options=set(df["Location"].dropna().values),
-                                      placeholder="All")
-    depot = st.sidebar.multiselect(label="Depot",
-                                   options=set(df["Depot"].dropna().values),
-                                   placeholder="All")
-    customer = st.sidebar.multiselect(label="Customer",
-                                      options=set(df["Customer"].dropna().values),
-                                      placeholder="All")
-    unit = st.sidebar.multiselect(label="Unit#",
-                                  options=set(df["Unit #"].dropna().values),
-                                  placeholder="All")
-
-    month = st.sidebar.multiselect(label="Month", options=months_list, default=["August", "October", "December"])
-    year = st.sidebar.selectbox(label="Year", options=year_list)
-
-    # -------------------- Filtered Data -------------------------------------------
-    filtered_df = filter_data(df, location, depot, customer, unit)
-    filtered_df = filtered_df[filtered_df["Year"] == year]
-    filtered_data = filtered_df.copy()
-    filtered_df_prev = filtered_df.copy()
-    filtered_df = filtered_df[filtered_df["Month"].isin(month)]
-
-    previous_month = months_list[months_list.index(month[0]) - 1]
-    if previous_month == "December":
-        filtered_df_prev = pd.DataFrame()
-    else:
-        filtered_df_prev = filtered_df_prev[filtered_df_prev["Month"] == previous_month]
-    # ------------------------- Main Display ---------------------------------------
-    if len(filtered_df) == 0:
-        st.title("No Data Record found.")
-    # -------------------------- KPIs calculation ----------------------------------
-
-    cost_of_inventory, percentage_change_coi = get_coi(filtered_df, filtered_df_prev)
-    inventory_sold, percentage_change_is = get_inv_sold(filtered_df, filtered_df_prev)
-    inv_under_repair, percentage_change_ur = get_inv_under_repair(filtered_df, filtered_df_prev)
-    inv_picked, percentage_change_ip = get_inv_picked(filtered_df, filtered_df_prev)
-    gatein_aging, percentage_change_gia = get_gatein_aging(filtered_df, filtered_df_prev)
-    dwell_time, percentage_change_dt = get_dwell_time(filtered_df, filtered_df_prev)
-
-    # -------------------------- KPIs Display ---------------------------------------
-    kpi_row = st.columns(6)
-    kpi_row[0].metric(label="Cost of Inventory",
-                      value=f"{format_kpi_value(cost_of_inventory)}",
-                      delta=f"{percentage_change_coi:.1f}%")
-
-    kpi_row[1].metric(label="Inventory Sold",
-                      value=f"{format_kpi_value(inventory_sold)}",
-                      delta=f"{percentage_change_is:.1f}%")
-
-    kpi_row[2].metric(label="Inventory Undergoing Repairs",
-                      value=f"{format_kpi_value(inv_under_repair)}",
-                      delta=f"{percentage_change_ur:.1f}%")
-
-    kpi_row[3].metric(label="Inventory Picked Up",
-                      value=f"{inv_picked} items",
-                      delta=f"{percentage_change_ip:.1f}%")
-
-    kpi_row[4].metric(label="Gate In",  # Aging of Inventory (Gate In to Today)
-                      value=f"{gatein_aging:.1f} days",
-                      delta=f"{percentage_change_gia:.1f}%")
-    try:
-        kpi_row[5].metric(label="Gate Out",  # Dwell Time (Gate In to Sell Date)
-                          value=f"{int(dwell_time)} days",
-                          delta=f"{percentage_change_dt:.1f}%")
-    except ValueError:
-        kpi_row[5].metric(label="Gate Out",  # Dwell Time (Gate In to Sell Date)
-                          value=f"{0} days",
-                          delta=f"{percentage_change_dt:.1f}%")
-
     # ---------------------------------------------------------------------------------
-    menu = option_menu(menu_title=None, options=["Overview", "Monthly Sales and Costs",
+    menu = option_menu(menu_title=None, options=["Overview", "Sales & Costs",
                                                  "Inventory In vs. Out", "Sales Projection",
                                                  "News"], orientation="horizontal")
 
     # --------------------------------- Charts  ---------------------------------------
     if menu == "Overview":
+        # ------------------------ Filters ------------------------------------------------
+        location = st.sidebar.multiselect(label="Location",
+                                          options=set(df["Location"].dropna().values),
+                                          placeholder="All")
+        depot = st.sidebar.multiselect(label="Depot",
+                                       options=set(df["Depot"].dropna().values),
+                                       placeholder="All")
+        customer = st.sidebar.multiselect(label="Customer",
+                                          options=set(df["Customer"].dropna().values),
+                                          placeholder="All")
+        unit = st.sidebar.multiselect(label="Unit#",
+                                      options=set(df["Unit #"].dropna().values),
+                                      placeholder="All")
+
+        month = st.sidebar.multiselect(label="Month", options=months_list, default=["August", "October", "December"])
+        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
+
+        # -------------------- Filtered Data -------------------------------------------
+        filtered_df = filter_data(df, location, depot, customer, unit)
+        filtered_df = filtered_df[filtered_df["Year"] == year]
+        filtered_data = filtered_df.copy()
+        filtered_df_prev = filtered_df.copy()
+        filtered_df = filtered_df[filtered_df["Month"].isin(month)]
+
+        previous_month = months_list[months_list.index(month[0]) - 1]
+        if previous_month == "December":
+            filtered_df_prev = pd.DataFrame()
+        else:
+            filtered_df_prev = filtered_df_prev[filtered_df_prev["Month"] == previous_month]
+        # ------------------------- Main Display ---------------------------------------
+        if len(filtered_df) == 0:
+            st.title("No Data Record found.")
+        # -------------------------- KPIs calculation ----------------------------------
+
+        cost_of_inventory, percentage_change_coi, previous_cost_of_inventory = get_coi(filtered_df, filtered_df_prev)
+        inventory_sold, percentage_change_is = get_inv_sold(filtered_df, filtered_df_prev)
+        inv_under_repair, percentage_change_ur = get_inv_under_repair(filtered_df, filtered_df_prev)
+        inv_picked, percentage_change_ip = get_inv_picked(filtered_df, filtered_df_prev)
+        gatein_aging, percentage_change_gia = get_gatein_aging(filtered_df, filtered_df_prev)
+        dwell_time, percentage_change_dt = get_dwell_time(filtered_df, filtered_df_prev)
+
+        # -------------------------- KPIs Display ---------------------------------------
+        kpi_row = st.columns(6)
+        kpi_row[0].metric(label="Cost of Inventory",
+                          value=f"{format_kpi_value(cost_of_inventory)}",
+                          delta=f"{percentage_change_coi:.1f}%")
+
+        kpi_row[1].metric(label="Inventory Sold",
+                          value=f"{format_kpi_value(inventory_sold)}",
+                          delta=f"{percentage_change_is:.1f}%")
+
+        kpi_row[2].metric(label="Inventory Undergoing Repairs",
+                          value=f"{format_kpi_value(inv_under_repair)}",
+                          delta=f"{percentage_change_ur:.1f}%")
+
+        kpi_row[3].metric(label="Inventory Picked Up",
+                          value=f"{inv_picked} items",
+                          delta=f"{percentage_change_ip:.1f}%")
+
+        kpi_row[4].metric(label="Gate In",  # Aging of Inventory (Gate In to Today)
+                          value=f"{gatein_aging:.1f} days",
+                          delta=f"{percentage_change_gia:.1f}%")
+        try:
+            kpi_row[5].metric(label="Gate Out",  # Dwell Time (Gate In to Sell Date)
+                              value=f"{int(dwell_time)} days",
+                              delta=f"{percentage_change_dt:.1f}%")
+        except ValueError:
+            kpi_row[5].metric(label="Gate Out",  # Dwell Time (Gate In to Sell Date)
+                              value=f"{0} days",
+                              delta=f"{percentage_change_dt:.1f}%")
+
         charts_row = st.columns(2)
         # -------------------------- Depot Activity ---------------------------------------
 
@@ -131,7 +131,7 @@ if file_upload is not None:
             fig.add_trace(go.Bar(x=depot_activity.index, y=depot_activity[size], name=size))
 
         fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='Total Sales', title='DEPOT ACTIVITY',
-                          xaxis={'categoryorder': 'total ascending'}, height=400, hovermode="x unified",
+                          xaxis={'categoryorder': 'total ascending'}, hovermode="x unified",
                           legend_title="Size", hoverlabel=dict(bgcolor="white",
                                                                font_color="black",
                                                                font_size=16,
@@ -145,7 +145,7 @@ if file_upload is not None:
 
         # Create a pie chart using Plotly
         fig = px.pie(vendor_counts, values='Count', names='Vendor', title='VENDOR DISTRIBUTION',
-                     labels="percent+text", height=400, hole=0.3)
+                     labels="percent+text", hole=0.3)
         fig.update_layout(hovermode="x unified",
                           legend_title="Vendors", hoverlabel=dict(bgcolor="white",
                                                                   font_color="black",
@@ -156,11 +156,30 @@ if file_upload is not None:
 
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 2 -----------------------------------------------
-    if menu == "Monthly Sales and Costs":
+    if menu == "Sales & Costs":
+        # ------------------------ Filters ------------------------------------------------
+        location = st.sidebar.multiselect(label="Location",
+                                          options=set(df["Location"].dropna().values),
+                                          placeholder="All")
+        depot = st.sidebar.multiselect(label="Depot",
+                                       options=set(df["Depot"].dropna().values),
+                                       placeholder="All")
+        customer = st.sidebar.multiselect(label="Customer",
+                                          options=set(df["Customer"].dropna().values),
+                                          placeholder="All")
+        unit = st.sidebar.multiselect(label="Unit#",
+                                      options=set(df["Unit #"].dropna().values),
+                                      placeholder="All")
+
+        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
+
+        # -------------------- Filtered Data -------------------------------------------
+        filtered_data = filter_data(df, location, depot, customer, unit)
+        filtered_data = filtered_data[filtered_data["Year"] == year]
+
         charts_row = st.columns(2)
         # -------------------------- Monthly Sales Scatter Plot ---------------------------
         fig = go.Figure()
-
         # Iterate over unique 'Size' values
         for size in filtered_data['Size'].unique():
             df_size = filtered_data[filtered_data['Size'] == size]
@@ -204,16 +223,33 @@ if file_upload is not None:
 
     # ------------------------------ Page 3 -----------------------------------------------
     if menu == "Inventory In vs. Out":
+        # ------------------------ Filters ------------------------------------------------
+        location = st.sidebar.multiselect(label="Location",
+                                          options=set(df["Location"].dropna().values),
+                                          placeholder="All")
+        customer = st.sidebar.multiselect(label="Customer",
+                                          options=set(df["Customer"].dropna().values),
+                                          placeholder="All")
+        unit = st.sidebar.multiselect(label="Unit#",
+                                      options=set(df["Unit #"].dropna().values),
+                                      placeholder="All")
+        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
+
+        # -------------------- Filtered Data -------------------------------------------
+        filtered_data = filter_data(df, location, depot=None, customer=customer, unit=unit)
+        filtered_df = filtered_data[filtered_data["Year"] == year]
+
         charts_row = st.columns(2)
-        df = filtered_df.groupby(["Month"])["Gate In", "Gate Out"].count().reset_index()
-        df["Gate Out"] = (-1) * df["Gate Out"]
+        inv_in_out_data = filtered_df.groupby(["Month"])["Gate In", "Gate Out"].count().reset_index()
+        inv_in_out_data["Gate Out"] = (-1) * inv_in_out_data["Gate Out"]
 
         fig = go.Figure()
         fig.add_trace(
-            go.Bar(x=df["Month"], y=df["Gate In"], name="Gate In Items")
+            go.Bar(x=inv_in_out_data["Month"], y=inv_in_out_data["Gate In"], name="Gate In Items")
         )
         fig.add_trace(
-            go.Bar(x=df["Month"], y=df["Gate Out"], name="Gate Out Items", marker=dict(color="red"))
+            go.Bar(x=inv_in_out_data["Month"], y=inv_in_out_data["Gate Out"], name="Gate Out Items",
+                   marker=dict(color="red"))
         )
         fig.update_layout(
             barmode='group',  # This combines positive and negative bars for each month
@@ -229,15 +265,16 @@ if file_upload is not None:
 
         charts_row[0].plotly_chart(fig, use_container_width=True)
         # ------------------------------------------------------------------------------------
-        df = filtered_df.groupby(["Depot"])["Gate In", "Gate Out"].count().reset_index()
-        df["Gate Out"] = (-1) * df["Gate Out"]
+        inv_in_out_data = filtered_df.groupby(["Depot"])["Gate In", "Gate Out"].count().reset_index()
+        inv_in_out_data["Gate Out"] = (-1) * inv_in_out_data["Gate Out"]
 
         fig = go.Figure()
         fig.add_trace(
-            go.Bar(x=df["Depot"], y=df["Gate In"], name="Gate In Items")
+            go.Bar(x=inv_in_out_data["Depot"], y=inv_in_out_data["Gate In"], name="Gate In Items")
         )
         fig.add_trace(
-            go.Bar(x=df["Depot"], y=df["Gate Out"], name="Gate Out Items", marker=dict(color="red"))
+            go.Bar(x=inv_in_out_data["Depot"], y=inv_in_out_data["Gate Out"], name="Gate Out Items",
+                   marker=dict(color="red"))
         )
         fig.update_layout(
             barmode='group',  # This combines positive and negative bars for each month
@@ -281,7 +318,6 @@ if file_upload is not None:
 
     # ------------------------------ Page 5 -----------------------------------------------
 
-
-    st.dataframe(df, use_container_width=True)
+    # st.dataframe(df, use_container_width=True)
 
 # -------------------------------------------------------------------------------------------------------
