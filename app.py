@@ -84,7 +84,7 @@ if file_upload is not None:
             st.title("No Data Record found.")
         # -------------------------- KPIs calculation ----------------------------------
 
-        cost_of_inventory, percentage_change_coi, previous_cost_of_inventory = get_coi(filtered_df, filtered_df_prev)
+        cost_of_inventory, percentage_change_coi = get_coi(filtered_df, filtered_df_prev)
         inventory_sold, percentage_change_is = get_inv_sold(filtered_df, filtered_df_prev)
         inv_under_repair, percentage_change_ur = get_inv_under_repair(filtered_df, filtered_df_prev)
         inv_picked, percentage_change_ip = get_inv_picked(filtered_df, filtered_df_prev)
