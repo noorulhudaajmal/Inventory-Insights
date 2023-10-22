@@ -3,4 +3,4 @@ plotly==5.16.1
 streamlit==1.27.2
 openpyxl
 streamlit_option_menu
-newsapi==0.2.7
+newsapi_python==0.2.7
