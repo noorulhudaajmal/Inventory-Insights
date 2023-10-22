@@ -3,11 +3,13 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_sold, get_inv_under_repair, \
-    get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value
+    get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value, news_card
 from streamlit_option_menu import option_menu
+from newsapi import NewsApiClient
 
 st.set_page_config(page_title="Inventory Insights", page_icon="📊", layout="wide")
 
+api = NewsApiClient(api_key='93e00f8b0c6f4d6696c7aaaaa0b009d0')
 # ---------------------------------- Page Styling -------------------------------------
 
 with open("css/style.css") as css:
@@ -290,32 +292,28 @@ if file_upload is not None:
 
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 4 -----------------------------------------------
-    if menu == "Sales Projection":
-        charts_row = st.columns(2)
-        df = filtered_df.groupby(["Month"])["Gate In", "Gate Out"].count().reset_index()
-        df["Gate Out"] = (-1) * df["Gate Out"]
+    if menu == "News":
+        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
+        filtered_df = df[df["Year"] == year]
+        supplier = st.sidebar.selectbox(label="Vendor", options=set(filtered_df["Vendor"].dropna().values))
 
-        fig = go.Figure()
-        fig.add_trace(
-            go.Bar(x=df["Month"], y=df["Gate In"], name="Gate In Items")
-        )
-        fig.add_trace(
-            go.Bar(x=df["Month"], y=df["Gate Out"], name="Gate Out Items")
-        )
-        fig.update_layout(
-            barmode='group',  # This combines positive and negative bars for each month
-            title='Gate In vs. Gate Out over-time',
-            xaxis_title='Month',
-            yaxis_title='Items Count',
-            hovermode="x unified",
-            hoverlabel=dict(bgcolor="white",
-                            font_color="black",
-                            font_size=12,
-                            font_family="Rockwell"
-                            ))
-
-        st.plotly_chart(fig, use_container_width=True)
-
+        response_data = api.get_everything(q=supplier,
+                                           sort_by="publishedAt",
+                                           language="en",
+                                           # domains="marketscreener.com"
+                                           )
+        # Check if there are articles to display
+        if response_data['totalResults'] > 0:
+            news_col = st.columns((3, 1))
+            for article in response_data['articles']:
+                st.markdown(news_card.format(title=article['title'], image=article['urlToImage'],
+                                             description=article['content'],
+                                             published_at=f"{article['source']['name']} - {article['publishedAt']}",
+                                             url=article["url"]),
+                            unsafe_allow_html=True)
+                st.write("---")
+        else:
+            st.info("No news found")
     # ------------------------------ Page 5 -----------------------------------------------
 
     # st.dataframe(df, use_container_width=True)

@@ -134,3 +134,20 @@ def get_dwell_time(filtered_df: pd.DataFrame,
                         * 100 if dwell_time_prev != 0 else 0
 
     return dwell_time, percentage_change
+
+
+news_card = """
+    <article class='news'>
+      <div class="content text">
+        <small class="news--published">{published_at}</small>
+        <h2>{title}</h2>
+        <div class="body">
+          <p>{description}</p>
+        </div>
+        <a aria-label="Read more" href="{url}">Read more<span aria-hidden="true" class="icon icon-arrow"></span></a>
+      </div>
+      <div class="content image">
+        <img alt="temporary placeholder image" src="{image}">
+      </div> 
+    </article>
+    """
