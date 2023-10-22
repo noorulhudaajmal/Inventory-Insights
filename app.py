@@ -7,6 +7,7 @@ from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_s
 from streamlit_option_menu import option_menu
 from newsapi import NewsApiClient
 
+
 st.set_page_config(page_title="Inventory Insights", page_icon="📊", layout="wide")
 
 api = NewsApiClient(api_key='93e00f8b0c6f4d6696c7aaaaa0b009d0')
@@ -297,7 +298,7 @@ if file_upload is not None:
         filtered_df = df[df["Year"] == year]
         supplier = st.sidebar.selectbox(label="Vendor", options=set(filtered_df["Vendor"].dropna().values))
 
-        response_data = api.get_everything(q=supplier,
+        response_data = api.get_everything(q=F"{supplier} suppliers",
                                            sort_by="publishedAt",
                                            language="en",
                                            # domains="marketscreener.com"
@@ -314,8 +315,10 @@ if file_upload is not None:
                 st.write("---")
         else:
             st.info("No news found")
-    # ------------------------------ Page 5 -----------------------------------------------
 
-    # st.dataframe(df, use_container_width=True)
+    # ------------------------------ Page 5 -----------------------------------------------
+    if menu == "Sales Projection":
+        st.write("to be implemented...")
+        st.dataframe(df, use_container_width=True)
 
 # -------------------------------------------------------------------------------------------------------
