@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
@@ -6,11 +7,13 @@ from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_s
     get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value, news_card
 from streamlit_option_menu import option_menu
 from newsapi import NewsApiClient
+import requests
 
+API_KEY = "c80d0c096c034605ade69b231f29cf4004a883e250c2449185da04a663086149"
+API_ENDPOINT = "https://api.newsfilter.io/search?token={}".format(API_KEY)
 
 st.set_page_config(page_title="Inventory Insights", page_icon="📊", layout="wide")
 
-api = NewsApiClient(api_key='93e00f8b0c6f4d6696c7aaaaa0b009d0')
 # ---------------------------------- Page Styling -------------------------------------
 
 with open("css/style.css") as css:
@@ -30,7 +33,7 @@ st.markdown("""
 # ----------------------------------- Data Loading ------------------------------------
 
 with st.sidebar:
-    file_upload = st.file_uploader("Upload data file", type=["csv", "xlsx", "xls"])
+    file_upload = st.file_uploader("Upload data file", type=["csv", "xlsx", "xls"], )
 
 df = pd.DataFrame()
 if file_upload is not None:
@@ -260,6 +263,7 @@ if file_upload is not None:
             xaxis_title='Month',
             yaxis_title='Items Count',
             hovermode="x unified",
+            showlegend=False,
             hoverlabel=dict(bgcolor="white",
                             font_color="black",
                             font_size=12,
@@ -285,6 +289,7 @@ if file_upload is not None:
             xaxis_title='Depot',
             yaxis_title='Items Count',
             hovermode="x unified",
+            showlegend=False,
             hoverlabel=dict(bgcolor="white",
                             font_color="black",
                             font_size=12,
@@ -293,32 +298,38 @@ if file_upload is not None:
 
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 4 -----------------------------------------------
-    if menu == "News":
-        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
-        filtered_df = df[df["Year"] == year]
-        supplier = st.sidebar.selectbox(label="Vendor", options=set(filtered_df["Vendor"].dropna().values))
-
-        response_data = api.get_everything(q=F"{supplier} suppliers",
-                                           sort_by="publishedAt",
-                                           language="en",
-                                           # domains="marketscreener.com"
-                                           )
-        # Check if there are articles to display
-        if response_data['totalResults'] > 0:
-            news_col = st.columns((3, 1))
-            for article in response_data['articles']:
-                st.markdown(news_card.format(title=article['title'], image=article['urlToImage'],
-                                             description=article['content'],
-                                             published_at=f"{article['source']['name']} - {article['publishedAt']}",
-                                             url=article["url"]),
-                            unsafe_allow_html=True)
-                st.write("---")
-        else:
-            st.info("No news found")
-
-    # ------------------------------ Page 5 -----------------------------------------------
     if menu == "Sales Projection":
         st.write("to be implemented...")
         st.dataframe(df, use_container_width=True)
 
+    # ------------------------------ Page 5 -----------------------------------------------
+    if menu == "News":
+        year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
+        filtered_df = df[df["Year"] == year]
+        supplier = st.sidebar.selectbox(label="Vendor", options=["TGH", "CRGO", "TRTN", "GSL", "CMRE"])
+        yesterday = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        today = datetime.now().strftime('%Y-%m-%d')
+        queryString = f"symbols:{supplier} AND publishedAt:[{yesterday} TO {today}]"
+        payload = {
+            "queryString": queryString,
+            "from": 0,
+            "size": 10
+        }
+        response = requests.post(API_ENDPOINT, json=payload)
+        response_data = response.json()
+        if len(response_data["articles"]) == 0:
+            st.info("No news found", icon="ℹ")
+
+        for article in response_data['articles']:
+            title = article.get('title', supplier)
+            image = article.get('imageUrl', './images/news.jpg')
+            description = article.get('description', 'No description found')
+            source_name = article['source'].get('name', 'No Source listed')
+            published_at = article.get('publishedAt', today)
+            url = article.get('sourceUrl', './')
+            formatted_description = f"{source_name} - {published_at}"
+            st.markdown(news_card.format(title=title, image=image, description=description,
+                                         published_at=formatted_description, url=url),
+                        unsafe_allow_html=True)
+            st.write("---")
 # -------------------------------------------------------------------------------------------------------

@@ -21,7 +21,7 @@ html, body, [class*="css"] {
 .news {
           display: flex;
           flex-direction: row-reverse;
-          background: lightgrey;
+          border-radius: 10px;
         }
 
  .content.text{

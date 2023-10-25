@@ -137,7 +137,7 @@ def get_dwell_time(filtered_df: pd.DataFrame,
 
 
 news_card = """
-    <article class='news'>
+    <article class='news' style="background: "#b5e2fa";">
       <div class="content text">
         <small class="news--published">{published_at}</small>
         <h2>{title}</h2>
