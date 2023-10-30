@@ -1,6 +1,10 @@
-pandas~=1.5.0
-plotly==5.16.1
-streamlit==1.27.2
+pandas
+plotly
+streamlit
 openpyxl
 streamlit_option_menu
 newsapi_python==0.2.7
+requests
+beautifulsoup4
+geopy
+pycountry

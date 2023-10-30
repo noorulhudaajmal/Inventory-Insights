@@ -6,8 +6,9 @@ import plotly.express as px
 from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_sold, get_inv_under_repair, \
     get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value, news_card
 from streamlit_option_menu import option_menu
-from newsapi import NewsApiClient
 import requests
+
+from scraper.scrape import scrap_data, get_countries_codes
 
 API_KEY = "c80d0c096c034605ade69b231f29cf4004a883e250c2449185da04a663086149"
 API_ENDPOINT = "https://api.newsfilter.io/search?token={}".format(API_KEY)
@@ -299,8 +300,56 @@ if file_upload is not None:
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 4 -----------------------------------------------
     if menu == "Sales Projection":
-        st.write("to be implemented...")
-        st.dataframe(df, use_container_width=True)
+        data = pd.DataFrame()
+        try:
+            data = scrap_data(url="https://moverdb.com/container-shipping/united-states")
+        except Exception as e:
+            st.warning("Error retrieving data!!!")
+            st.info(e)
+
+        filter_row = st.columns((1, 1, 1, 2))
+        size = filter_row[1].selectbox("Size", options=["20FT", "40FT"])
+        exports = filter_row[2].selectbox("Export Size", options=["Large", "Medium", "Small"])
+
+        small = data[data[size] >= 9000]
+        medium = data[((data[size] < 9000) & (data[size] >= 5000))]
+        large = data[data[size] < 5000]
+        df = pd.DataFrame()
+        if exports == "Large":
+            df = small
+        elif exports == "Medium":
+            df = medium
+        else:
+            df = large
+
+        row_2 = st.columns((3,2))
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(x=df["Port"], y=df[size],
+                   marker=dict(color="#264653"))
+        )
+        fig.update_layout(
+            title='Shipping Container Costs From Western US',
+            xaxis_title='Port',
+            yaxis_title=f"Amount($)",
+            hovermode="x unified",
+            showlegend=False,
+            hoverlabel=dict(bgcolor="white",
+                            font_color="black",
+                            font_size=12,
+                            font_family="Rockwell"
+                            ))
+
+        row_2[0].plotly_chart(fig, use_container_width=True)
+
+        data = get_countries_codes(data, "Port")
+
+        fig = px.choropleth(data, locations="ISO",
+                            color=f"{size}",
+                            hover_name="Port",
+                            color_continuous_scale=px.colors.sequential.Plasma)
+        row_2[1].plotly_chart(fig, use_container_width=True)
+        # st.dataframe(data, use_container_width=True)
 
     # ------------------------------ Page 5 -----------------------------------------------
     if menu == "News":
