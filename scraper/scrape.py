@@ -9,7 +9,7 @@ GEOLOCATOR = Nominatim(user_agent="geoapiExercises")
 
 def get_webdata(url):
     r = requests.get(url)
-    soup = BeautifulSoup(r.content, 'html5lib')
+    soup = BeautifulSoup(r.content, 'lxml')
     return soup
 
 
