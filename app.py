@@ -50,9 +50,11 @@ if file_upload is not None:
     year_list = list(set(df[df["Year"] != 0]["Year"].values))
     year_list.sort()
 
+    colors = ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51", "#84a59d", "#006d77",
+              "#f6bd60", "#90be6d", "#577590", "#e07a5f", "#81b29a", "#f2cc8f", "#0081a7"]
     # ---------------------------------------------------------------------------------
     menu = option_menu(menu_title=None, options=["Overview", "Sales & Costs",
-                                                 "Inventory In vs. Out", "Sales Projection",
+                                                 "Inventory In vs. Out", "Sales' Ports",
                                                  "News"], orientation="horizontal")
 
     # --------------------------------- Charts  ---------------------------------------
@@ -79,6 +81,8 @@ if file_upload is not None:
         filtered_df = filtered_df[filtered_df["Year"] == year]
         filtered_data = filtered_df.copy()
         filtered_df_prev = filtered_df.copy()
+        if not month:
+            month = months_list
         filtered_df = filtered_df[filtered_df["Month"].isin(month)]
 
         previous_month = months_list[months_list.index(month[0]) - 1]
@@ -131,13 +135,17 @@ if file_upload is not None:
         charts_row = st.columns(2)
         # -------------------------- Depot Activity ---------------------------------------
 
-        depot_activity = filtered_df.groupby(['Depot', 'Size'])['Sale Price'].sum().unstack(fill_value=0)
+        depot_activity = filtered_df.groupby(['Depot', 'Size'])['Unit #'].nunique().unstack(fill_value=0)
 
         fig = go.Figure()
+        i = 0
         for size in depot_activity.columns:
-            fig.add_trace(go.Bar(x=depot_activity.index, y=depot_activity[size], name=size))
+            fig.add_trace(
+                go.Bar(x=depot_activity.index, y=depot_activity[size], name=size, marker=dict(color=colors[i])))
+            i += 1
 
-        fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='Total Sales', title='DEPOT ACTIVITY',
+        fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='No. of Units Sold',
+                          title='DEPOT ACTIVITY',
                           xaxis={'categoryorder': 'total ascending'}, hovermode="x unified",
                           legend_title="Size", hoverlabel=dict(bgcolor="white",
                                                                font_color="black",
@@ -152,7 +160,7 @@ if file_upload is not None:
 
         # Create a pie chart using Plotly
         fig = px.pie(vendor_counts, values='Count', names='Vendor', title='VENDOR DISTRIBUTION',
-                     labels="percent+text", hole=0.3)
+                     labels="percent+text", hole=0.3, color_discrete_sequence=colors)
         fig.update_layout(hovermode="x unified",
                           legend_title="Vendors", hoverlabel=dict(bgcolor="white",
                                                                   font_color="black",
@@ -188,6 +196,7 @@ if file_upload is not None:
         # -------------------------- Monthly Sales Scatter Plot ---------------------------
         fig = go.Figure()
         # Iterate over unique 'Size' values
+        i = 0
         for size in filtered_data['Size'].unique():
             df_size = filtered_data[filtered_data['Size'] == size]
             df_size = pd.DataFrame(df_size.groupby("Month")["Sale Price"].sum())
@@ -200,7 +209,10 @@ if file_upload is not None:
                 mode='lines+markers+text',
                 textposition='top center',
                 name=size,
+                marker=dict(color=colors[i]),
+                line=dict(color=colors[i])
             ))
+            i += 1
         fig.update_layout(title="Sales by Month", xaxis_title="Months", yaxis_title="Sales", hovermode="x unified",
                           legend_title="Size", hoverlabel=dict(bgcolor="white",
                                                                font_color="black",
@@ -215,8 +227,10 @@ if file_upload is not None:
 
         # Create the stacked bar chart
         fig = go.Figure()
+        i = 0
         for cost in grouped_data.columns:
-            fig.add_trace(go.Bar(x=grouped_data.index, y=grouped_data[cost], name=cost))
+            fig.add_trace(go.Bar(x=grouped_data.index, y=grouped_data[cost], name=cost, marker=dict(color=colors[i])))
+            i += 1
         fig.update_layout(
             title="AVG. YEARLY SALES VS. COST BREAKDOWN",
             xaxis_title="Months", yaxis_title="Cost", barmode='stack', hovermode="x unified",
@@ -252,11 +266,12 @@ if file_upload is not None:
 
         fig = go.Figure()
         fig.add_trace(
-            go.Bar(x=inv_in_out_data["Month"], y=inv_in_out_data["Gate In"], name="Gate In Items")
+            go.Bar(x=inv_in_out_data["Month"], y=inv_in_out_data["Gate In"], name="Gate In Items",
+                   marker=dict(color="#2a9d8f"))
         )
         fig.add_trace(
             go.Bar(x=inv_in_out_data["Month"], y=inv_in_out_data["Gate Out"], name="Gate Out Items",
-                   marker=dict(color="red"))
+                   marker=dict(color="#e63946"))
         )
         fig.update_layout(
             barmode='group',  # This combines positive and negative bars for each month
@@ -278,11 +293,12 @@ if file_upload is not None:
 
         fig = go.Figure()
         fig.add_trace(
-            go.Bar(x=inv_in_out_data["Depot"], y=inv_in_out_data["Gate In"], name="Gate In Items")
+            go.Bar(x=inv_in_out_data["Depot"], y=inv_in_out_data["Gate In"], name="Gate In Items",
+                   marker=dict(color="#2a9d8f"))
         )
         fig.add_trace(
             go.Bar(x=inv_in_out_data["Depot"], y=inv_in_out_data["Gate Out"], name="Gate Out Items",
-                   marker=dict(color="red"))
+                   marker=dict(color="#e63946"))
         )
         fig.update_layout(
             barmode='group',  # This combines positive and negative bars for each month
@@ -299,7 +315,7 @@ if file_upload is not None:
 
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 4 -----------------------------------------------
-    if menu == "Sales Projection":
+    if menu == "Sales' Ports":
         data = pd.DataFrame()
         try:
             data = scrap_data(url="https://moverdb.com/container-shipping/united-states")
@@ -322,7 +338,7 @@ if file_upload is not None:
         else:
             df = large
 
-        row_2 = st.columns((3,2))
+        row_2 = st.columns((3, 2))
         fig = go.Figure()
         fig.add_trace(
             go.Bar(x=df["Port"], y=df[size],
@@ -349,6 +365,29 @@ if file_upload is not None:
                             hover_name="Port",
                             color_continuous_scale=px.colors.sequential.Plasma)
         row_2[1].plotly_chart(fig, use_container_width=True)
+
+        row_3 = st.columns((1, 4, 1))
+        df = data[["Origin Country (Port/City)", "20FT", "40FT"]]
+        df["20FT"] = df["20FT"].apply(lambda x: f"${x}")
+        df["40FT"] = df["40FT"].apply(lambda x: f"${x}")
+        fig = go.Figure(data=[go.Table(
+            columnwidth=[2, 1, 1],
+            header=dict(
+                values=list(df.columns),
+                font=dict(size=20, color='white', family='ubuntu'),
+                fill_color='#264653',
+                align=['left', 'center'],
+                height=60
+            ),
+            cells=dict(
+                values=[df[K].tolist() for K in df.columns],
+                font=dict(size=16, color="black", family='ubuntu'),
+                fill_color='#f5ebe0',
+                height=40
+            ))]
+        )
+        fig.update_layout(margin=dict(l=0, r=10, b=10, t=30), height=1000)
+        row_3[1].plotly_chart(fig, use_container_width=True)
         # st.dataframe(data, use_container_width=True)
 
     # ------------------------------ Page 5 -----------------------------------------------
