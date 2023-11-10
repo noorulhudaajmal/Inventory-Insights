@@ -10,6 +10,7 @@ import requests
 
 from scraper.scrape import scrap_data, get_countries_codes
 
+
 API_KEY = "c80d0c096c034605ade69b231f29cf4004a883e250c2449185da04a663086149"
 API_ENDPOINT = "https://api.newsfilter.io/search?token={}".format(API_KEY)
 
@@ -37,6 +38,7 @@ with st.sidebar:
     file_upload = st.file_uploader("Upload data file", type=["csv", "xlsx", "xls"], )
 
 df = pd.DataFrame()
+
 if file_upload is not None:
     if file_upload.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
         df = pd.read_excel(file_upload, engine="openpyxl")
@@ -236,7 +238,7 @@ if file_upload is not None:
         filtered_df = filtered_data[filtered_data["Year"] == year]
 
         charts_row = st.columns(2)
-        inv_in_out_data = filtered_df.groupby(["Month"])["Gate In", "Gate Out"].count().reset_index()
+        inv_in_out_data = filtered_df.groupby(["Month"])[["Gate In", "Gate Out"]].count().reset_index()
         inv_in_out_data["Gate Out"] = (-1) * inv_in_out_data["Gate Out"]
 
         fig = go.Figure()
