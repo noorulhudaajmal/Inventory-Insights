@@ -55,16 +55,12 @@ def extract_year(date):
         return 0
 
 
-def filter_data(data: pd.DataFrame, location, depot, customer, unit):
+def filter_data(data: pd.DataFrame, location, depot):
     filtered_df = data.copy()
     if location:
         filtered_df = filtered_df[filtered_df["Location"].isin(location)]
     if depot:
         filtered_df = filtered_df[filtered_df["Depot"].isin(depot)]
-    if customer:
-        filtered_df = filtered_df[filtered_df["Customer"].isin(customer)]
-    if unit:
-        filtered_df = filtered_df[filtered_df["Unit #"].isin(unit)]
 
     return filtered_df
 

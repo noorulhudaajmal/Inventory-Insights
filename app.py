@@ -66,35 +66,22 @@ if file_upload is not None:
         depot = st.sidebar.multiselect(label="Depot",
                                        options=set(df["Depot"].dropna().values),
                                        placeholder="All")
-        customer = st.sidebar.multiselect(label="Customer",
-                                          options=set(df["Customer"].dropna().values),
-                                          placeholder="All")
-        unit = st.sidebar.multiselect(label="Unit#",
-                                      options=set(df["Unit #"].dropna().values),
-                                      placeholder="All")
-
-        month = st.sidebar.multiselect(label="Month", options=months_list, default=["August", "October", "December"])
         year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
 
         # -------------------- Filtered Data -------------------------------------------
-        filtered_df = filter_data(df, location, depot, customer, unit)
-        filtered_df = filtered_df[filtered_df["Year"] == year]
+        filtered_df = filter_data(df, location, depot)
         filtered_data = filtered_df.copy()
-        filtered_df_prev = filtered_df.copy()
-        if not month:
-            month = months_list
-        filtered_df = filtered_df[filtered_df["Month"].isin(month)]
-
-        previous_month = months_list[months_list.index(month[0]) - 1]
-        if previous_month == "December":
-            filtered_df_prev = pd.DataFrame()
+        filtered_df = filtered_df[filtered_df["Year"] == year]
+        prev_year_ind = year_list.index(year) - 1
+        filtered_df_prev = filtered_data.copy()
+        if prev_year_ind >= 0:
+            filtered_df_prev = filtered_df_prev[filtered_df_prev["Year"] == year_list[prev_year_ind]]
         else:
-            filtered_df_prev = filtered_df_prev[filtered_df_prev["Month"] == previous_month]
+            filtered_df_prev = pd.DataFrame()
         # ------------------------- Main Display ---------------------------------------
         if len(filtered_df) == 0:
             st.title("No Data Record found.")
         # -------------------------- KPIs calculation ----------------------------------
-
         cost_of_inventory, percentage_change_coi = get_coi(filtered_df, filtered_df_prev)
         inventory_sold, percentage_change_is = get_inv_sold(filtered_df, filtered_df_prev)
         inv_under_repair, percentage_change_ur = get_inv_under_repair(filtered_df, filtered_df_prev)
@@ -135,7 +122,8 @@ if file_upload is not None:
         charts_row = st.columns(2)
         # -------------------------- Depot Activity ---------------------------------------
 
-        depot_activity = filtered_df.groupby(['Depot', 'Size'])['Unit #'].nunique().unstack(fill_value=0)
+        depot_activity_data = filtered_df[filtered_df["Status"] == "SELL"]
+        depot_activity = depot_activity_data.groupby(['Depot', 'Size'])['Unit #'].nunique().unstack(fill_value=0)
 
         fig = go.Figure()
         i = 0
@@ -179,17 +167,10 @@ if file_upload is not None:
         depot = st.sidebar.multiselect(label="Depot",
                                        options=set(df["Depot"].dropna().values),
                                        placeholder="All")
-        customer = st.sidebar.multiselect(label="Customer",
-                                          options=set(df["Customer"].dropna().values),
-                                          placeholder="All")
-        unit = st.sidebar.multiselect(label="Unit#",
-                                      options=set(df["Unit #"].dropna().values),
-                                      placeholder="All")
-
         year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
 
         # -------------------- Filtered Data -------------------------------------------
-        filtered_data = filter_data(df, location, depot, customer, unit)
+        filtered_data = filter_data(df, location, depot)
         filtered_data = filtered_data[filtered_data["Year"] == year]
 
         charts_row = st.columns(2)
@@ -248,16 +229,10 @@ if file_upload is not None:
         location = st.sidebar.multiselect(label="Location",
                                           options=set(df["Location"].dropna().values),
                                           placeholder="All")
-        customer = st.sidebar.multiselect(label="Customer",
-                                          options=set(df["Customer"].dropna().values),
-                                          placeholder="All")
-        unit = st.sidebar.multiselect(label="Unit#",
-                                      options=set(df["Unit #"].dropna().values),
-                                      placeholder="All")
         year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
 
         # -------------------- Filtered Data -------------------------------------------
-        filtered_data = filter_data(df, location, depot=None, customer=customer, unit=unit)
+        filtered_data = filter_data(df, location, depot=None)
         filtered_df = filtered_data[filtered_data["Year"] == year]
 
         charts_row = st.columns(2)
