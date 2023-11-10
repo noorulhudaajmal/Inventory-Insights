@@ -265,7 +265,7 @@ if file_upload is not None:
 
         charts_row[0].plotly_chart(fig, use_container_width=True)
         # ------------------------------------------------------------------------------------
-        inv_in_out_data = filtered_df.groupby(["Depot"])["Gate In", "Gate Out"].count().reset_index()
+        inv_in_out_data = filtered_df.groupby(["Depot"])[["Gate In", "Gate Out"]].count().reset_index()
         inv_in_out_data["Gate Out"] = (-1) * inv_in_out_data["Gate Out"]
 
         fig = go.Figure()
