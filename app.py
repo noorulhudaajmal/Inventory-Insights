@@ -2,16 +2,14 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 from utils import months_list, pre_process_data, filter_data, get_coi, get_inv_sold, get_inv_under_repair, \
     get_inv_picked, get_gatein_aging, get_dwell_time, format_kpi_value, news_card
 from streamlit_option_menu import option_menu
 import requests
-
 from scraper.scrape import scrap_data, get_countries_codes
 
 
-API_KEY = "c80d0c096c034605ade69b231f29cf4004a883e250c2449185da04a663086149"
+API_KEY = st.secrets.news_api_key["key"]
 API_ENDPOINT = "https://api.newsfilter.io/search?token={}".format(API_KEY)
 
 st.set_page_config(page_title="Inventory Insights", page_icon="📊", layout="wide")
@@ -38,17 +36,21 @@ with st.sidebar:
     file_upload = st.file_uploader("Upload data file", type=["csv", "xlsx", "xls"], )
 
 df = pd.DataFrame()
+df0 = pd.DataFrame()
 
 if file_upload is not None:
     if file_upload.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
         df = pd.read_excel(file_upload, engine="openpyxl")
+        df0 = pd.read_excel(file_upload, sheet_name="Container X")
     elif file_upload.type == "application/vnd.ms-excel":  # Check if it's an XLS file
         df = pd.read_excel(file_upload)
+        df0 = pd.read_excel(file_upload, sheet_name="Container X")
     elif file_upload.type == "text/csv":  # Check if it's a CSV file
         df = pd.read_csv(file_upload, encoding=("UTF-8"))
 
     # ---------------------- Data Pre-processing --------------------------------------
     df = pre_process_data(df)
+
     year_list = list(set(df[df["Year"] != 0]["Year"].values))
     year_list.sort()
 
@@ -134,8 +136,8 @@ if file_upload is not None:
                 go.Bar(x=depot_activity.index, y=depot_activity[size], name=size, marker=dict(color=colors[i])))
             i += 1
 
-        fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='No. of Units Sold',
-                          title='DEPOT ACTIVITY',
+        fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='Units Available for Sale',
+                          title='INVENTORY AVAILABLE FOR SALE',
                           xaxis={'categoryorder': 'total ascending'}, hovermode="x unified",
                           legend_title="Size", hoverlabel=dict(bgcolor="white",
                                                                font_color="black",
@@ -145,20 +147,25 @@ if file_upload is not None:
                           )
         charts_row[0].plotly_chart(fig, use_container_width=True)
         # -------------------------- Vendor Ratio ---------------------------------------
-        vendor_counts = filtered_df['Vendor'].value_counts().reset_index()
-        vendor_counts.columns = ['Vendor', 'Count']
+        depot_activity_data = filtered_df[filtered_df["Status"] == "SOLD"]
+        depot_activity = depot_activity_data.groupby(['Depot', 'Size'])['Unit #'].nunique().unstack(fill_value=0)
 
-        # Create a pie chart using Plotly
-        fig = px.pie(vendor_counts, values='Count', names='Vendor', title='VENDOR DISTRIBUTION',
-                     labels="percent+text", hole=0.3, color_discrete_sequence=colors)
-        fig.update_layout(hovermode="x unified",
-                          legend_title="Vendors", hoverlabel=dict(bgcolor="white",
-                                                                  font_color="black",
-                                                                  font_size=16,
-                                                                  font_family="Rockwell"
-                                                                  )
+        fig = go.Figure()
+        i = 0
+        for size in depot_activity.columns:
+            fig.add_trace(
+                go.Bar(x=depot_activity.index, y=depot_activity[size], name=size, marker=dict(color=colors[i])))
+            i += 1
+
+        fig.update_layout(barmode='group', xaxis_title='Depot', yaxis_title='# Units Sold',
+                          title='SOLD INVENTORY DISTRIBUTION',
+                          xaxis={'categoryorder': 'total ascending'}, hovermode="x unified",
+                          legend_title="Size", hoverlabel=dict(bgcolor="white",
+                                                               font_color="black",
+                                                               font_size=16,
+                                                               font_family="Rockwell"
+                                                               )
                           )
-
         charts_row[1].plotly_chart(fig, use_container_width=True)
     # ------------------------------ Page 2 -----------------------------------------------
     if menu == "Sales & Costs":
@@ -236,9 +243,11 @@ if file_upload is not None:
         # -------------------- Filtered Data -------------------------------------------
         filtered_data = filter_data(df, location, depot=None)
         filtered_df = filtered_data[filtered_data["Year"] == year]
+        filtered_df['Month'] = pd.Categorical(filtered_df['Month'], categories=months_list, ordered=True)
 
         charts_row = st.columns(2)
         inv_in_out_data = filtered_df.groupby(["Month"])[["Gate In", "Gate Out"]].count().reset_index()
+
         inv_in_out_data["Gate Out"] = (-1) * inv_in_out_data["Gate Out"]
 
         fig = go.Figure()
@@ -327,6 +336,7 @@ if file_upload is not None:
             yaxis_title=f"Amount($)",
             hovermode="x unified",
             showlegend=False,
+            height=400,
             hoverlabel=dict(bgcolor="white",
                             font_color="black",
                             font_size=12,
@@ -337,13 +347,13 @@ if file_upload is not None:
 
         data = get_countries_codes(data, "Port")
 
-        fig = px.choropleth(data, locations="ISO",
-                            color=f"{size}",
-                            hover_name="Port",
-                            color_continuous_scale=px.colors.sequential.Plasma)
-        row_2[1].plotly_chart(fig, use_container_width=True)
+        # fig = px.choropleth(data, locations="ISO",
+        #                     color=f"{size}",
+        #                     hover_name="Port",
+        #                     color_continuous_scale=px.colors.sequential.Plasma)
+        # row_2[1].plotly_chart(fig, use_container_width=True)
 
-        row_3 = st.columns((1, 4, 1))
+        # row_3 = st.columns((1, 4, 1))
         df = data[["Origin Country (Port/City)", "20FT", "40FT"]]
         df["20FT"] = df["20FT"].apply(lambda x: f"${x}")
         df["40FT"] = df["40FT"].apply(lambda x: f"${x}")
@@ -363,38 +373,85 @@ if file_upload is not None:
                 height=40
             ))]
         )
-        fig.update_layout(margin=dict(l=0, r=10, b=10, t=30), height=1000)
-        row_3[1].plotly_chart(fig, use_container_width=True)
+        fig.update_layout(margin=dict(l=0, r=10, b=10, t=30), height=400)
+        row_2[1].plotly_chart(fig, use_container_width=True)
         # st.dataframe(data, use_container_width=True)
+        st.write("---")
+
+        if len(df0) != 0:
+            df0["WEEK_TO_DISPLAY"] = pd.to_datetime(df0["WEEK_TO_DISPLAY"])
+
+            row_3 = st.columns((1, 4))
+            row_3[0].write("# ")
+            container_type = row_3[0].selectbox(label="Container Type",
+                                                options=df0["CONTAINER_TYPE"].unique())
+            container_condition = row_3[0].selectbox(label="Container Type",
+                                                     options=df0["CONTAINER_CONDITION"].unique())
+            selected_data = df0[(df0["CONTAINER_TYPE"] == container_type) &
+                                (df0["CONTAINER_CONDITION"] == container_condition)]
+            df1 = selected_data.groupby(["WEEK_TO_DISPLAY",
+                                         "SALES_LOCATION_NAME"])["MEAN_PRICE_PER_CONTAINER"].mean().reset_index()
+
+            fig = go.Figure()
+            ind = 0
+            for loc in df1["SALES_LOCATION_NAME"].unique():
+                filtered_df1 = df1[df1["SALES_LOCATION_NAME"] == loc]
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_df1["WEEK_TO_DISPLAY"], y=filtered_df1["MEAN_PRICE_PER_CONTAINER"],
+                        mode="lines+markers", name=loc, line=dict(color=colors[ind]), marker=dict(color=colors[ind])
+                    )
+                )
+                ind += 1
+            fig.update_layout(
+                title='Container Prices w.r.t Location overtime',
+                xaxis_title='Date',
+                yaxis_title="Container Prices",
+                legend_title="Sales Location",
+                hovermode="x unified",
+                hoverlabel=dict(bgcolor="white",
+                                font_color="black",
+                                font_size=12,
+                                font_family="Rockwell"
+                                ))
+
+            row_3[1].plotly_chart(fig, use_container_width=True)
 
     # ------------------------------ Page 5 -----------------------------------------------
     if menu == "News":
         year = st.sidebar.selectbox(label="Year", options=year_list, index=2)
         filtered_df = df[df["Year"] == year]
-        supplier = st.sidebar.selectbox(label="Vendor", options=["TGH", "CRGO", "TRTN", "GSL", "CMRE"])
+        vendors = ["TGH", "CRGO", "TRTN", "GSL", "CMRE"]
+        suppliers = st.sidebar.multiselect(label="Vendor", options=vendors,
+                                           placeholder="All")
+        if not suppliers:
+            suppliers = vendors
+
         yesterday = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         today = datetime.now().strftime('%Y-%m-%d')
-        queryString = f"symbols:{supplier} AND publishedAt:[{yesterday} TO {today}]"
-        payload = {
-            "queryString": queryString,
-            "from": 0,
-            "size": 10
-        }
-        response = requests.post(API_ENDPOINT, json=payload)
-        response_data = response.json()
-        if len(response_data["articles"]) == 0:
+        response_data_store = {}
+        for supplier in suppliers:
+            queryString = f"symbols:{supplier} AND publishedAt:[{yesterday} TO {today}]"
+            payload = {
+                "queryString": queryString,
+                "from": 0,
+                "size": 10
+            }
+            response = requests.post(API_ENDPOINT, json=payload)
+            response_data = response.json()
+            response_data_store.update(response_data)
+        if len(response_data_store["articles"]) == 0:
             st.info("No news found", icon="ℹ")
 
-        for article in response_data['articles']:
-            title = article.get('title', supplier)
-            image = article.get('imageUrl', './images/news.jpg')
+        for article in response_data_store['articles']:
+            title = article.get('title', )
             description = article.get('description', 'No description found')
             source_name = article['source'].get('name', 'No Source listed')
             published_at = article.get('publishedAt', today)
             url = article.get('sourceUrl', './')
             formatted_description = f"{source_name} - {published_at}"
-            st.markdown(news_card.format(title=title, image=image, description=description,
-                                         published_at=formatted_description, url=url),
+            st.markdown(news_card().format(title=title, description=description,
+                                           published_at=formatted_description, url=url),
                         unsafe_allow_html=True)
             st.write("---")
 # -------------------------------------------------------------------------------------------------------

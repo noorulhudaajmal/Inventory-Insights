@@ -19,6 +19,8 @@ To run the dashboard on your local machine, follow the steps below:
 2. Install the required dependencies by running the following command:
    
     `pip install -r requirements.txt`
+3. Get your news-filter api from https://newsfilter.io/
+4. Insert your key in `./streamlit/secrets.toml`
 
 
 ### Usage

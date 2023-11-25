@@ -132,7 +132,8 @@ def get_dwell_time(filtered_df: pd.DataFrame,
     return dwell_time, percentage_change
 
 
-news_card = """
+def news_card():
+    return """
     <article class='news' style="background: "#b5e2fa";">
       <div class="content text">
         <small class="news--published">{published_at}</small>
@@ -142,8 +143,5 @@ news_card = """
         </div>
         <a aria-label="Read more" href="{url}">Read more<span aria-hidden="true" class="icon icon-arrow"></span></a>
       </div>
-      <div class="content image">
-        <img alt="temporary placeholder image" src="{image}">
-      </div> 
     </article>
     """
